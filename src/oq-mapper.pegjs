@@ -176,7 +176,7 @@ CreateTableStatement
     ""
   ) _ schema:TableName _ wl
     __ elements:Elements __
-  wr __ EngineToken _ "=" _ engines _ ( AutoIncrementToken "=" integer / "" ) _ ( DefaultToken _ CharsetToken "=" charsets / "")
+  wr __ EngineToken _ "=" _ engines _ ( AutoIncrementToken "=" integer+ / "" ) _ ( DefaultToken _ CharsetToken "=" charsets / "") _ ( CollateToken _ "=" _ collations)
   EOS {
     var fields = elements.filter(function(element) {
       return element.type !== "pk" && element.type !== "constraint" && element.type !== "index";
@@ -472,8 +472,11 @@ TableName "table name" = identifier:( ObjectName "." ObjectName / ObjectName ) {
 //// Engines ------------------------------
 engines = ("InnoDB" / "MyISAM")
 
-//// Charests ------------------------------
-charsets = ("utf8")
+//// Charsets ------------------------------
+charsets = ( "utf8mb4" / "utf8" / regularIdentifier )
+
+//// Collations ------------------------------
+collations = regularIdentifier
 
 //// MySQL Functions
 mysqlFunctions = CurrentTimestampFunc
@@ -582,7 +585,7 @@ anyCharacter "Any characters"
   
 commentCharacters = chars:("'" (!"'" SourceCharacter)* "'")
   
-defaultValue = anyCharacter / integer+ / mysqlFunctions
+defaultValue = anyCharacter / integer+ / mysqlFunctions / NullToken
 
 // Any does not consume any input
 any "Any"
