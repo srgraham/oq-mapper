@@ -338,7 +338,7 @@ SortStatement
 Constraint
   = ConstraintToken _ name:ObjectName __
   ForeignToken _ KeyToken _ "(" ihead:ObjectName itail:( __ "," __  ObjectName)* ")" __
-  ReferencesToken _ fk:ColumnName _ "(" rhead:ObjectName rtail:( __ "," __  ObjectName)* ")" __
+  ReferencesToken _ fkTable:TableName _ "(" rhead:ObjectName rtail:( __ "," __  ObjectName)* ")" __
   ( OnToken _ DeleteToken _ ForeignKeyOnAction / "" ) __
   ( OnToken _ UpdateToken _ ForeignKeyOnAction ( "," / "" ) / "" ) __ {
     var identifiers = flattenParams(ihead, itail);
@@ -347,7 +347,7 @@ Constraint
       type: "constraint",
       name: name,
       keys: identifiers,
-      refTable: fk,
+      refTable: fkTable,
       refKeys: refs
     };
   }
