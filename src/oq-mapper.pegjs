@@ -343,7 +343,7 @@ Constraint
   ForeignToken _ KeyToken _ "(" ihead:ObjectName itail:( __ "," __  ObjectName)* ")" __
   ReferencesToken _ fkTable:TableName _ "(" rhead:ObjectName rtail:( __ "," __  ObjectName)* ")" __
   ( OnToken _ DeleteToken _ ForeignKeyOnAction / "" ) __
-  ( OnToken _ UpdateToken _ ForeignKeyOnAction ( "," / "" ) / "" ) __ {
+  ( OnToken _ UpdateToken _ ForeignKeyOnAction ( "," / "" ) / "" ) ("," / "") __ {
     var identifiers = flattenParams(ihead, itail);
     var refs = flattenParams(rhead, rtail);
     return {
