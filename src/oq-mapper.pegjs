@@ -248,16 +248,24 @@ Elements = (
   Column
 )+
 
-Column = _ fieldName:FieldName _ type:Type _ nullRestriction:NullRestriction _ specifiedDefaultValue:DefaultValue _ autoIncrement:AutoIncrement _ meta:Comment _ ( "," / "" ) __ {
+Column = _ fieldName:FieldName _ type:Type _ specifiedCollateValue:CollateValue _ nullRestriction:NullRestriction _ specifiedDefaultValue:DefaultValue _ autoIncrement:AutoIncrement _ meta:Comment _ ( "," / "" ) __ {
+
   var defaultValue = genDefaultValue(type, nullRestriction);
   if (specifiedDefaultValue !== null) {
   	defaultValue.default = specifiedDefaultValue;
   }
+
+  var collateObj;
+  if (specifiedCollateValue !== null) {
+    collateObj = {collate : specifiedCollateValue};
+  }
+
   var column = Object.assign(
     {},
     fieldName,
     type,
     meta,
+    collateObj,
     nullRestriction,
     defaultValue,
     autoIncrement
@@ -278,6 +286,16 @@ DefaultValueStatement = DefaultToken _ val:defaultValue {
 }
 
 DefaultValue "default statement" = value:( DefaultValueStatement / "" ) {
+  return value !== "" ? value : null;
+}
+
+CollateValueStatement = CollateToken _ val:collations {
+  return Array.isArray(val) ? val.filter(function(v) {
+    return v !== "";
+  }).join("") : val;
+}
+
+CollateValue "collate statement" = value:( CollateValueStatement / "" ) {
   return value !== "" ? value : null;
 }
 
@@ -342,75 +360,75 @@ ForeignKeyOnAction
 
 // Tokens ------------------------------
 
-SetToken "set token" = ( "SET"i ) 
-CreateToken "create token" =  ( "CREATE"i )
-RoleToken "role token" = ( "ROLE"i )
-DomainToken "domain token" = ( "DOMAIN"i )
-TypeToken "type token" = ( "TYPE"i )
-TranslationToken "translation token" = ( "TRANSLATION"i )
-ModuleToken "module token" = ( "MODULE"i )
-ProcedureToken "procedure token" = ( "PROCEDURE"i )
-FunctionToken "function token" = ( "FUNCTION"i )
-MethodToken "method token" = ( "METHOD"i )
-SpecificToken "specific token" = ( "SPECIFIC"i ) 
-AlterToken "alter token" = ( "ALTER"i )
-DropToken "drop token" = ( "DROP"i )
-TruncateToken "truncate token" = ( "TRUNCATE"i ) 
-StartToken "start token" = ( "START"i )
-TransactionToken "transaction token" = ( "TRANSACTION"i )
-CommitToken "commit token" = ( "COMMIT"i )
-UseToken "use token" = ( "USE"i ) 
-DelimiterToken "delimiter token" = ( "DELIMITER"i )
-SchemaToken "schema token" = ( "SCHEMA"i ) 
-DefaultToken "default token" = ( "DEFAULT"i )
+SetToken "set token" = ( "SET" / "set" )
+CreateToken "create token" =  ( "CREATE" / "create" )
+RoleToken "role token" = ( "ROLE" / "role" )
+DomainToken "domain token" = ( "DOMAIN" / "domain" )
+TypeToken "type token" = ( "TYPE" / "type" )
+TranslationToken "translation token" = ( "TRANSLATION" / "translation" )
+ModuleToken "module token" = ( "MODULE" / "module" )
+ProcedureToken "procedure token" = ( "PROCEDURE" / "procedure" )
+FunctionToken "function token" = ( "FUNCTION" / "function" )
+MethodToken "method token" = ( "METHOD" / "method" )
+SpecificToken "specific token" = ( "SPECIFIC" / "specific" )
+AlterToken "alter token" = ( "ALTER" / "alter" )
+DropToken "drop token" = ( "DROP" / "drop" )
+TruncateToken "truncate token" = ( "TRUNCATE" / "truncate" )
+StartToken "start token" = ( "START" / "start" )
+TransactionToken "transaction token" = ( "TRANSACTION" / "transaction" )
+CommitToken "commit token" = ( "COMMIT" / "commit" )
+UseToken "use token" = ( "USE" / "use" )
+DelimiterToken "delimiter token" = ( "DELIMITER" / "delimiter" )
+SchemaToken "schema token" = ( "SCHEMA" / "schema" )
+DefaultToken "default token" = ( "DEFAULT" / "default" )
 CollateToken "default token" = ( "COLLATE"i )
-CharacterToken "character token" = ( "CHARACTER"i )
-TableToken "table token" = ( "TABLE"i )
-IfToken "if token" = ( "IF"i )
-ElseToken "else token" = ( "ELSE"i )
-CaseToken "case token" = ( "CASE"i )
-WhenToken "when token" = ( "WHEN"i )
-NotToken "not token" = ( "NOT"i )
-ExistsToken "exists token" = ( "EXISTS"i )
-NullToken "null token" = ( "NULL"i )
-PrimaryToken "primary token" = ( "PRIMARY"i )
-KeyToken "key token" = ( "KEY"i )
-UniqueToken "unique token" = ( "UNIQUE"i )
-IndexToken "index token" = ( "INDEX"i )
-ConstraintToken "constraint token" = ( "CONSTRAINT"i )
-ForeignToken "foreign token" = ( "FOREIGN"i )
-ReferencesToken "references token" = ( "REFERENCES"i )
-AscToken "asc token" = ( "ASC"i )
-DescToken "desc token" = ( "DESC"i )
+CharacterToken "character token" = ( "CHARACTER" / "character" )
+TableToken "table token" = ( "TABLE" / "table" )
+IfToken "if token" = ( "IF" / "if" )
+ElseToken "else token" = ( "ELSE" / "else" )
+CaseToken "case token" = ( "CASE" / "case" )
+WhenToken "when token" = ( "WHEN" / "when" )
+NotToken "not token" = ( "NOT" / "not" )
+ExistsToken "exists token" = ( "EXISTS" / "exists" )
+NullToken "null token" = ( "NULL" / "null" )
+PrimaryToken "primary token" = ( "PRIMARY" / "primary" )
+KeyToken "key token" = ( "KEY" / "key" )
+UniqueToken "unique token" = ( "UNIQUE" / "unique" )
+IndexToken "index token" = ( "INDEX" / "index" )
+ConstraintToken "constraint token" = ( "CONSTRAINT" / "constraint" )
+ForeignToken "foreign token" = ( "FOREIGN" / "foreign" )
+ReferencesToken "references token" = ( "REFERENCES" / "references" )
+AscToken "asc token" = ( "ASC" / "asc" )
+DescToken "desc token" = ( "DESC" / "desc" )
 AutoIncrementToken "auto increment token" = ( "AUTO_INCREMENT" / "auto_increment" )
-EngineToken "engine token" = ( "ENGINE"i )
-InsertToken "insert token" = ( "INSERT"i )
-IntoToken "into token" = ( "INTO"i )
-SelectToken "select token" = ( "SELECT"i )
-UpdateToken "update token" = ( "UPDATE"i )
-DeleteToken "delete token" = ( "DELETE"i )
-BeginToken "begin token" = ( "BEGIN"i )
-EndToken "end token" = ( "END"i )
-JoinToken "join token" = ( "JOIN"i )
-LeftToken "left token" = ( "LEFT"i )
-RightToken "right token" = ( "RIGHT"i )
-InnerToken "inner token" = ( "INNER"i )
-OnToken "on token" = ( "ON"i )
-WhereToken "where token" = ( "WHERE"i )
-InToken "in token" = ( "IN"i ) 
-TriggerToken "trigger token" = ( "TRIGGER"i )
-DefinerToken "definer token" = ( "DEFINER"i )
-NoToken "no token" = ( "NO"i ) 
-ActionToken "action token" = ( "ACTION"i ) 
-CharsetToken "charset token" = ( "CHARSET"i ) 
-CommentToken "comment token" = ( "COMMENT"i ) 
-VarToken "var token" = ("@") 
-BeforeToken "before token" = ( "BEFORE"i ) 
-AfterToken "after token" = ( "AFTER"i ) 
-RestrictToken "restrict token" = ( "RESTRICT"i )
-CascadeToken "cascade token" = ( "CASCADE"i )
-ShowToken "show token" = ( "SHOW"i )
-WarningsToken "warning token" = ( "WARNINGS"i)
+EngineToken "engine token" = ( "ENGINE" / "engine" )
+InsertToken "insert token" = ( "INSERT" / "insert" )
+IntoToken "into token" = ( "INTO" / "into" )
+SelectToken "select token" = ( "SELECT" / "select" )
+UpdateToken "update token" = ( "UPDATE" / "update" )
+DeleteToken "delete token" = ( "DELETE" / "delete" )
+BeginToken "begin token" = ( "BEGIN" / "begin" )
+EndToken "end token" = ( "END" / "end" )
+JoinToken "join token" = ( "JOIN" / "join" )
+LeftToken "left token" = ( "LEFT" / "left" )
+RightToken "right token" = ( "RIGHT" / "right" )
+InnerToken "inner token" = ( "INNER" / "inner" )
+OnToken "on token" = ( "ON" / "on" )
+WhereToken "where token" = ( "WHERE" / "where" )
+InToken "in token" = ( "IN" / "in" )
+TriggerToken "trigger token" = ( "TRIGGER" / "trigger" )
+DefinerToken "definer token" = ( "DEFINER" / "definer" )
+NoToken "no token" = ( "NO" / "no" )
+ActionToken "action token" = ( "ACTION" / "action" )
+CharsetToken "charset token" = ( "CHARSET" / "charset" )
+CommentToken "comment token" = ( "COMMENT" / "comment" )
+VarToken "var token" = ("@")
+BeforeToken "before token" = ( "BEFORE" / "before" )
+AfterToken "after token" = ( "AFTER" / "after" )
+RestrictToken "restrict token" = ( "RESTRICT" / "restrict" )
+CascadeToken "cascade token" = ( "CASCADE" / "cascade" )
+ShowToken "show token" = ( "SHOW" / "show" )
+WarningsToken "warning token" = ( "WARNINGS" / "warnings")
 
 // Types ------------------------------
 
@@ -430,12 +448,12 @@ TinyInt = type:( "TINYINT"i ) _ length:Length _ sign:Sign {
 VarChar = type:( "VARCHAR"i ) _ length:Length {
   return genStringType(type, length);
 }
-Date = type:( "DATE"i ) {
+Date = type:( "DATE" / "date" ) {
   return {
     type: type.toLowerCase()
   }
 }
-DateTime = type:( "DATETIME"i ) {
+DateTime = type:( "DATETIME" / "datetime" ) {
   return {
     type: type.toLowerCase()
   }
@@ -444,7 +462,7 @@ DateTime = type:( "DATETIME"i ) {
 // TypeMeta ------------------------------
 
 Length "Length of value" = length:( "(" intVal ")" / "" ) { return length === "" ? 0 : Number(length.filter(function(item) { return item !== "(" && item !== ")" })[0]); }
-Sign "Signed/Unsigned" = sign:( "UNSIGNED"i / "" ) { return sign === "" ? "signed" : "unsigned"; }
+Sign "Signed/Unsigned" = sign:( "UNSIGNED" / "unsigned" / "" ) { return sign === "" ? "signed" : "unsigned"; }
 
 // Indentifiers ------------------------------
 ObjectName "Identifier" = name:( "`" regularIdentifier "`" / regularIdentifier ) {
@@ -482,8 +500,8 @@ collations = regularIdentifier
 //// MySQL Functions
 mysqlFunctions = CurrentTimestampFunc
   / NowFunc
-  
-NowFunc = ( "NOW"i) ( "()" / "" )
+
+NowFunc = ( "NOW" / "now") ( "()" / "" )
 CurrentTimestampFunc = ( "CURRENT_TIMESTAMP" / "current_timestamp" ) ("()" / "")
 
 // Utilities ------------------------------
