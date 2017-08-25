@@ -329,7 +329,6 @@ FieldName = name:ObjectName {
 }
 
 DefaultValueStatement = DefaultToken _ val:literal {
-console.log(8888)
   return Array.isArray(val) ? val.filter(function(v) {
     return v !== "";
   }).join("") : val;
@@ -524,7 +523,7 @@ TypeDecimal = type:( "REAL"i / "DOUBLE"i / "FLOAT"i / "DECIMAL"i / "NUMERIC"i  )
   return genDecimalType(type, length, decimals)
 }
 
-EnumValue = intVal
+EnumValue = literal
 
 TypeEnum = "ENUM"i _ "(" head:EnumValue tail:( __ "," __  EnumValue)* ")" {
   var out = {
@@ -726,8 +725,8 @@ string = (singleQuotedString / doubleQuotedString)
 hexDigit = [a-f0-9]i
 
 hexLiteral
-  = hexDigits:( "X"i singleQuote hexDigitsInner:(hexDigit+) singleQuote {console.log(1);return hexDigitsInner}
-    / "0x"i hexDigitsInner:(hexDigit+) {console.log(2);return hexDigitsInner}
+  = hexDigits:( "X"i singleQuote hexDigitsInner:(hexDigit+) singleQuote {return hexDigitsInner}
+    / "0x"i hexDigitsInner:(hexDigit+) {return hexDigitsInner}
     ){
       if(hexDigits.length % 2 == 1) {
         hexDigits.unshift('0');
@@ -754,7 +753,6 @@ literal
   // bitLiteral
   // boolLiterals
   / NullToken {return null}
-  / .{console.log(234, location())}
 
 // Any does not consume any input
 any "Any"
