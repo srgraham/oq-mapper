@@ -49,6 +49,8 @@
         numberType.max = sign === "unsigned" ? 255 : 127;
         numberType.bites = 1;
         break;
+      default:
+        throw new Error(`Unknown genNumberType() type '${numberType.type}'`)
     }
     return numberType;
   }
@@ -58,12 +60,55 @@
       type: type.toLowerCase(),
       length: length
     }
-    switch (stringType) {
+    switch (stringType.type) {
       case "varchar":
-        stringType.length = 255
+      case "char":
+      case "tinytext":
+        stringType.length = Math.pow(2, 8) -1
         break;
+
+      case "text":
+        stringType.length = Math.pow(2, 16) - 1
+        break;
+      case "mediumtext":
+        stringType.length = Math.pow(2, 24) - 1
+        break;
+      case "longtext":
+        stringType.length = Math.pow(2, 32) - 1
+        break;
+      default:
+        throw new Error(`Unknown genStringType() type '${stringType.type}'`)
     }
     return stringType;
+  }
+
+  var genDecimalType = function (type, length, decimals) {
+    var decimalType = {
+      type: type.toLowerCase(),
+      length: length,
+    }
+
+    var isDecimalsSet = (typeof decimals !== 'undefined');
+
+    if (isDecimalsSet) {
+      decimalType.decimals = decimals
+    }
+    switch (decimalType.type) {
+      case "real":
+      case "double":
+      case "float":
+        if(!isDecimalsSet) {
+          throw new Error(`Type ${decimalType.type} is required to have a decimals parameter`)
+        }
+        break;
+      case "decimal":
+      case "numeric":
+        break;
+      default:
+        throw new Error(`Unknown genDecimalType() type '${decimalType.type}'`)
+    }
+
+    return decimalType;
   }
     
   var currentTimeStamp = function() {
@@ -84,13 +129,14 @@
     return [head, ...rest];
   }
   
-  var genIndex = function(key, head, tail, isUnique) {
+  var genIndex = function(key, head, tail, isUnique, length) {
     var keys = flattenParams(head, tail);
     var index = {
       type: "index",
       name: key,
       keys: keys,
-      unique: isUnique
+      unique: isUnique,
+      length: length,
     };
     return index;
   }
@@ -179,7 +225,7 @@ CreateTableStatement
     ""
   ) _ schema:TableName _ wl
     __ elements:Elements __
-  wr __ EngineToken _ "=" _ engines _ ( AutoIncrementToken "=" integer+ / "" ) _ ( DefaultToken _ CharsetToken "=" charsets / "") _ ( CollateToken _ "=" _ collations)
+  wr __ EngineToken _ "=" _ engines _ ( AutoIncrementToken "=" integer+ / "" ) _ ( DefaultToken _ CharsetToken "=" charsets / "") _ ( CollateToken _ "=" _ collations / "")
   EOS {
     var fields = elements.filter(function(element) {
       return element.type !== "pk" && element.type !== "constraint" && element.type !== "index";
@@ -321,22 +367,30 @@ PrimaryKey
   }
 
 Index
-  = IndexToken _ identifier:ObjectName _ "(" head:ObjectName _ SortStatement tail:( __ "," __  ObjectName _ SortStatement)* _ ")" ( "," / "" ) __ {
-      return genIndex(identifier, head, tail, false);
+  = IndexToken _ identifier:ObjectName _ "(" head:ObjectName _ length:IndexLength _ SortStatement tail:( __ "," __  ObjectName _ SortStatement)* _ ")" ( "," / "" ) __ {
+      return genIndex(identifier, head, tail, false, length);
   }
   
 Key
-  = KeyToken _ identifier:ObjectName _ "(" head:ObjectName _ SortStatement tail:( __ "," __  ObjectName _ SortStatement )* _ ")" ( "," / "" ) __ {
-    return genIndex(identifier, head, tail, false);
+  = KeyToken _ identifier:ObjectName _ "(" head:ObjectName _ length:IndexLength _ SortStatement tail:( __ "," __  ObjectName _ SortStatement )* _ ")" ( "," / "" ) __ {
+    return genIndex(identifier, head, tail, false, length);
   }
-  
-UniqueIndex
-  = UniqueToken _ IndexToken _ identifier:ObjectName _ "(" head:ObjectName _ SortStatement tail:( __ "," __  ObjectName _ SortStatement)* _ ")" ( "," / "" ) __ {
-    return genIndex(identifier, head, tail, true);
+
+UniqueIndex =
+  UniqueToken _ indexObj:Key {
+     indexObj.unique = true
+     return indexObj
   }
   
 SortStatement
   = sort:( AscToken / DescToken / "" ) { return null; }
+
+IndexLength = lengthPieces:(( "(" _ intVal _ ")" ) / "") {
+  if(lengthPieces[2]){
+    return lengthPieces[2]
+  }
+  return null
+}
 
 Constraint
   = ConstraintToken _ name:ObjectName __
@@ -436,21 +490,39 @@ WarningsToken "warning token" = ( "WARNINGS"i)
 // Types ------------------------------
 
 Type "types"
-  = Int
-  / TinyInt
-  / VarChar
+  = TypeInt
+  / TypeString
+  / TypeDecimal
   / DateTime
   / Date
 
-Int = type:( "INT"i ) _ length:Length _ sign:Sign {
+
+TypeInt = type:( "TINYINT"i / "SMALLINT"i / "MEDIUMINT"i / "INT"i / "INTEGER"i / "BIGINT"i ) _ length:Length _ sign:Sign {
   return genNumberType(type, length, sign);
 }
-TinyInt = type:( "TINYINT"i ) _ length:Length _ sign:Sign {
-  return genNumberType(type, length, sign);
-}
-VarChar = type:( "VARCHAR"i ) _ length:Length {
+
+TypeString = type:( "VARCHAR"i / "CHAR"i / "TINYTEXT"i / "TEXT"i / "MEDIUMTEXT"i / "LONGTEXT"i ) _ length:Length {
   return genStringType(type, length);
 }
+
+TypeDecimal = type:( "REAL"i / "DOUBLE"i / "FLOAT"i / "DECIMAL"i / "NUMERIC"i  ) _
+  (
+    "("
+      length:intVal _
+      ( "," _ decimals:intVal)? _
+    ")"
+  )? {
+
+  if(typeof length == 'undefined') {
+    var length = null;
+  }
+  if(typeof decimals == 'undefined') {
+    var decimals = null;
+  }
+  console.log(234, arguments, typeof decimals)
+  return genDecimalType(type, length, decimals)
+}
+
 Date = type:( "DATE"i ) {
   return {
     type: type.toLowerCase()
@@ -591,6 +663,12 @@ SourceCharacter
 integer "Integer"
   = [0-9]
 
+digit "Digit"
+  = [0-9]
+
+floatVal "Float"
+  = digit* "." digit+
+
 intVal "Int"
   = int:integer+ {
     return int.join("");
@@ -607,7 +685,7 @@ anyCharacter "Any characters"
   
 commentCharacters = chars:("'" (!"'" SourceCharacter)* "'")
   
-defaultValue = anyCharacter / integer+ / mysqlFunctions / NullToken
+defaultValue = anyCharacter / floatVal / intVal / mysqlFunctions / NullToken
 
 // Any does not consume any input
 any "Any"
