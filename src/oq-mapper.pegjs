@@ -153,6 +153,9 @@ Statement
   / UseStatement
   / DelimiterStatement
   / ShowStatement
+  / EmptyStatement
+
+EmptyStatement = _ ";"
 
 SetStatement = SetToken _ any  { return null; }
 CreateStatement
