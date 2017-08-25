@@ -328,7 +328,8 @@ FieldName = name:ObjectName {
   };
 }
 
-DefaultValueStatement = DefaultToken _ val:defaultValue {
+DefaultValueStatement = DefaultToken _ val:literal {
+console.log(8888)
   return Array.isArray(val) ? val.filter(function(v) {
     return v !== "";
   }).join("") : val;
@@ -493,6 +494,7 @@ Type "types"
   = TypeInt
   / TypeString
   / TypeDecimal
+  / TypeEnum
   / DateTime
   / Date
 
@@ -519,8 +521,18 @@ TypeDecimal = type:( "REAL"i / "DOUBLE"i / "FLOAT"i / "DECIMAL"i / "NUMERIC"i  )
   if(typeof decimals == 'undefined') {
     var decimals = null;
   }
-  console.log(234, arguments, typeof decimals)
   return genDecimalType(type, length, decimals)
+}
+
+EnumValue = intVal
+
+TypeEnum = "ENUM"i _ "(" head:EnumValue tail:( __ "," __  EnumValue)* ")" {
+  var out = {
+    type: 'enum',
+    values: flattenParams(head, tail),
+  }
+  return out;
+
 }
 
 Date = type:( "DATE"i ) {
@@ -686,6 +698,63 @@ anyCharacter "Any characters"
 commentCharacters = chars:("'" (!"'" SourceCharacter)* "'")
   
 defaultValue = anyCharacter / floatVal / intVal / mysqlFunctions / NullToken
+
+
+unescapedChar "unescapedChar" = [^\0-\x1F\x22\x5c]
+
+escape = "\\"
+
+char "Char"
+  = unescapedChar
+  / escape
+    sequence:(
+      doubleQuote
+    / singleQuote
+    )
+    {return sequence}
+  / singleQuote singleQuote { return "'"; }
+  / doubleQuote doubleQuote { return '"'; }
+
+doubleQuote "DoubleQuote" = "\""
+singleQuote "SingleQuote" = "'"
+
+doubleQuotedString "doubleQuotedString" = doubleQuote chars:(!doubleQuote c:char{return c})* doubleQuote { return chars.join(""); }
+singleQuotedString "singleQuotedString" = singleQuote chars:(!singleQuote c:char{return c})* singleQuote { return chars.join(""); }
+
+string = (singleQuotedString / doubleQuotedString)
+
+hexDigit = [a-f0-9]i
+
+hexLiteral
+  = hexDigits:( "X"i singleQuote hexDigitsInner:(hexDigit+) singleQuote {console.log(1);return hexDigitsInner}
+    / "0x"i hexDigitsInner:(hexDigit+) {console.log(2);return hexDigitsInner}
+    ){
+      if(hexDigits.length % 2 == 1) {
+        hexDigits.unshift('0');
+      }
+      var arr = []
+      for(var i=0; i < hexDigits.length; i+=2 ) {
+        var byteVal = parseInt(hexDigits[i], 16) * 16 + parseInt(hexDigits[i + 1], 16);
+        arr.push(byteVal);
+      }
+      return new Buffer(arr)
+    }
+
+
+floatLiteral "FloatLiteral" = val:(digit* "." digit+ ) { return Number(val.join('')) }
+integerLiteral "IntegerLiteral" = val:(digit+) { return Number(val.join('')) }
+numericLiteral "NumericLiteral" = val:(floatLiteral / integerLiteral) { return Number(val) }
+
+literal
+  = string
+  / "d9"
+  / hexLiteral
+  / numericLiteral
+  // date
+  // bitLiteral
+  // boolLiterals
+  / NullToken {return null}
+  / .{console.log(234, location())}
 
 // Any does not consume any input
 any "Any"
