@@ -400,7 +400,7 @@ ForeignToken "foreign token" = ( "FOREIGN"i )
 ReferencesToken "references token" = ( "REFERENCES"i )
 AscToken "asc token" = ( "ASC"i )
 DescToken "desc token" = ( "DESC"i )
-AutoIncrementToken "auto increment token" = ( "AUTO_INCREMENT" / "auto_increment" )
+AutoIncrementToken "auto increment token" = ( "AUTO_INCREMENT"i )
 EngineToken "engine token" = ( "ENGINE"i )
 InsertToken "insert token" = ( "INSERT"i )
 IntoToken "into token" = ( "INTO"i )
@@ -502,7 +502,7 @@ mysqlFunctions = CurrentTimestampFunc
   / NowFunc
 
 NowFunc = ( "NOW"i) ( "()" / "" )
-CurrentTimestampFunc = ( "CURRENT_TIMESTAMP" / "current_timestamp" ) ("()" / "")
+CurrentTimestampFunc = ( "CURRENT_TIMESTAMP"i ) ("()" / "")
 
 // Utilities ------------------------------
 
