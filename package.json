@@ -33,6 +33,7 @@
   "homepage": "https://github.com/katsew/oq-mapper#readme",
   "dependencies": {
     "commander": "^2.11.0",
+    "lodash": "^4.17.4",
     "pegjs": "^0.10.0"
   },
   "devDependencies": {
