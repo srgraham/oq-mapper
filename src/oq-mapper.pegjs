@@ -49,6 +49,11 @@
         numberType.max = sign === "unsigned" ? 255 : 127;
         numberType.bites = 1;
         break;
+      case "bigint":
+        numberType.min = sign === "unsigned" ? 0 : -1 * Math.pow(2, 63);
+        numberType.max = sign === "unsigned" ? Math.pow(2, 64) : -1 * Math.pow(2, 63) - 1;
+        numberType.bites = 1;
+        break;
       default:
         throw new Error(`Unknown genNumberType() type '${numberType.type}'`)
     }
@@ -225,7 +230,7 @@ CreateTableStatement
     ""
   ) _ schema:TableName _ wl
     __ elements:Elements __
-  wr __ EngineToken _ "=" _ engines _ ( AutoIncrementToken "=" integer+ / "" ) _ ( DefaultToken _ CharsetToken "=" charsets / "") _ ( CollateToken _ "=" _ collations / "")
+  wr __ EngineToken _ "=" _ engines _ ( AutoIncrementToken "=" integer+ / "" ) _ ( DefaultToken _ CharsetToken "=" charsets / "") _ ( CollateToken _ "=" _ collations / "") _ ( RowFormatToken "=" row_formats)?
   EOS {
     var fields = elements.filter(function(element) {
       return element.type !== "pk" && element.type !== "constraint" && element.type !== "index";
@@ -245,7 +250,7 @@ CreateTableStatement
     });
     if (primaryKey.length > 1) { throw new Error("Primary key must be only 1."); }
     var mapped = Object.assign({}, schema, {
-      pk: primaryKey[0]["keys"],
+      pk: primaryKey.length ? primaryKey[0]["keys"] : null,
       fields: fields,
       constraint: foreignKey,
       index: index
@@ -297,7 +302,7 @@ Elements = (
   Column
 )+
 
-Column = _ fieldName:FieldName _ type:Type _ specifiedCollateValue:CollateValue _ nullRestriction:NullRestriction _ specifiedDefaultValue:DefaultValue _ autoIncrement:AutoIncrement _ meta:Comment _ ( "," / "" ) __ {
+Column = _ fieldName:FieldName _ type:Type _ specifiedCharsetValue:CharSetValue _ specifiedCollateValue:CollateValue _ nullRestriction:NullRestriction _ specifiedDefaultValue:DefaultValue _ autoIncrement:AutoIncrement _ meta:Comment _ ( "," / "" ) __ {
 
   var defaultValue = genDefaultValue(type, nullRestriction);
   if (specifiedDefaultValue !== null) {
@@ -305,8 +310,12 @@ Column = _ fieldName:FieldName _ type:Type _ specifiedCollateValue:CollateValue 
   }
 
   var collateObj;
+  var charsetObj;
   if (specifiedCollateValue !== null) {
     collateObj = {collate : specifiedCollateValue};
+  }
+  if (specifiedCollateValue !== null) {
+    charsetObj = {charset : specifiedCharsetValue};
   }
 
   var column = Object.assign(
@@ -315,6 +324,7 @@ Column = _ fieldName:FieldName _ type:Type _ specifiedCollateValue:CollateValue 
     type,
     meta,
     collateObj,
+    charsetObj,
     nullRestriction,
     defaultValue,
     autoIncrement
@@ -342,6 +352,16 @@ CollateValueStatement = CollateToken _ val:collations {
   return Array.isArray(val) ? val.filter(function(v) {
     return v !== "";
   }).join("") : val;
+}
+
+CharsetValueStatement = CharacterSetToken _ val:regularIdentifier {
+  return Array.isArray(val) ? val.filter(function(v) {
+    return v !== "";
+  }).join("") : val;
+}
+
+CharSetValue "CharSet statement" = value:( CharsetValueStatement / "" ) {
+  return value !== "" ? value : null;
 }
 
 CollateValue "collate statement" = value:( CollateValueStatement / "" ) {
@@ -439,6 +459,8 @@ DelimiterToken "delimiter token" = ( "DELIMITER"i )
 SchemaToken "schema token" = ( "SCHEMA"i )
 DefaultToken "default token" = ( "DEFAULT"i )
 CollateToken "default token" = ( "COLLATE"i )
+CharacterSetToken "default token" = ( "CHARACTER SET"i )
+RowFormatToken "default token" = ( "ROW_FORMAT"i )
 CharacterToken "character token" = ( "CHARACTER"i )
 TableToken "table token" = ( "TABLE"i )
 IfToken "if token" = ( "IF"i )
@@ -496,6 +518,7 @@ Type "types"
   / TypeEnum
   / DateTime
   / Date
+  / Timestamp
 
 
 TypeInt = type:( "TINYINT"i / "SMALLINT"i / "MEDIUMINT"i / "INT"i / "INTEGER"i / "BIGINT"i ) _ length:Length _ sign:Sign {
@@ -544,6 +567,11 @@ DateTime = type:( "DATETIME"i ) {
     type: type.toLowerCase()
   }
 }
+Timestamp = type:( "TIMESTAMP"i ) {
+  return {
+    type: type.toLowerCase()
+  }
+}
 
 // TypeMeta ------------------------------
 
@@ -582,6 +610,9 @@ charsets = ( "utf8mb4" / "utf8" / regularIdentifier )
 
 //// Collations ------------------------------
 collations = regularIdentifier
+
+// Row_Format
+row_formats = regularIdentifier
 
 //// MySQL Functions
 mysqlFunctions = CurrentTimestampFunc
@@ -744,6 +775,8 @@ floatLiteral "FloatLiteral" = val:(digit* "." digit+ ) { return Number(val.join(
 integerLiteral "IntegerLiteral" = val:(digit+) { return Number(val.join('')) }
 numericLiteral "NumericLiteral" = val:(floatLiteral / integerLiteral) { return Number(val) }
 
+functionLiteral "FunctionLiteral" = val:(regularIdentifier "()") {return text()}
+
 literal
   = string
   / "d9"
@@ -753,6 +786,7 @@ literal
   // bitLiteral
   // boolLiterals
   / NullToken {return null}
+  / functionLiteral
 
 // Any does not consume any input
 any "Any"
